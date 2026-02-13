@@ -219,6 +219,16 @@ def divide_fixed_total_length(curves, distance_feet, start_offset_feet, end_offs
                     'param': param,
                     'polycurve': trimmed_polycurve
                 })
+
+        # Add endpoint for chord length (not included in PointsAtChordLengthFromPoint)
+        endpoint = trimmed_polycurve.EndPoint
+        if endpoint is not None:
+            xyz_endpoint = endpoint.ToXyz()
+            division_points.append({
+                'point': xyz_endpoint,
+                'param': 1.0,
+                'polycurve': trimmed_polycurve
+            })
     else:
         # Default: Use PointAtSegmentLength for arc-based distance
         for distance in distances:
@@ -386,6 +396,15 @@ def divide_fixed_each_segment(curves, distance_feet, start_offset_feet, end_offs
                                 'param': param,
                                 'polycurve': trimmed_curve
                             })
+                    # Add endpoint for chord length (not included in PointsAtChordLengthFromPoint)
+                    endpoint = trimmed_curve.EndPoint
+                    if endpoint is not None:
+                        xyz_endpoint = endpoint.ToXyz()
+                        division_points.append({
+                            'point': xyz_endpoint,
+                            'param': 1.0,
+                            'polycurve': trimmed_curve
+                        })
                 else:
                     for distance in distances:
                         ds_point = trimmed_curve.PointAtSegmentLength(distance)
@@ -397,7 +416,7 @@ def divide_fixed_each_segment(curves, distance_feet, start_offset_feet, end_offs
                                 'polycurve': trimmed_curve
                             })
 
-                # Add endpoint for arc length (for chord, it's already included)
+                # Add endpoint for arc length (chord length endpoint already added above)
                 if distance_measurement != 'chord_length':
                     ds_point = trimmed_curve.PointAtSegmentLength(curve_length)
                     if ds_point is not None:
@@ -430,6 +449,15 @@ def divide_fixed_each_segment(curves, distance_feet, start_offset_feet, end_offs
                             'param': param,
                             'polycurve': trimmed_curve
                         })
+                # Add endpoint for chord length (not included in PointsAtChordLengthFromPoint)
+                endpoint = trimmed_curve.EndPoint
+                if endpoint is not None:
+                    xyz_endpoint = endpoint.ToXyz()
+                    division_points.append({
+                        'point': xyz_endpoint,
+                        'param': 1.0,
+                        'polycurve': trimmed_curve
+                    })
             else:
                 distances = [i * distance_feet for i in range(int(curve_length / distance_feet) + 1)]
 
@@ -1158,14 +1186,6 @@ if dialog_confirmed and form_data:
                     if family_symbol is None:
                         error_messages.append("ERROR: Invalid or deleted family type selected. Please select a valid family.")
                     else:
-                        # Activate family BEFORE transaction to avoid nested transaction conflicts
-                        try:
-                            if not family_symbol.IsActive:
-                                family_symbol.Activate()
-                        except Exception as activate_ex:
-                            error_messages.append("WARNING: Could not activate family - {0}".format(str(activate_ex)))
-                            # Continue anyway, family placement might still work
-
                         # Close any open transactions (Revit 2021 compatibility)
                         close_open_transactions()
 
@@ -1174,6 +1194,13 @@ if dialog_confirmed and form_data:
                         t.Start()
 
                         try:
+                            # Activate family INSIDE transaction (required by Revit API)
+                            try:
+                                if not family_symbol.IsActive:
+                                    family_symbol.Activate()
+                            except Exception as activate_ex:
+                                error_messages.append("WARNING: Could not activate family - {0}".format(str(activate_ex)))
+                                # Continue anyway, family placement might still work
                             for div_index, div_point in enumerate(division_points):
                                 try:
                                     # ===== Both Total Length and Each Segment now use DesignScript PolyCurve =====

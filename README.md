@@ -929,6 +929,8 @@ The script includes detailed console logging to help troubleshoot issues. To vie
 **Status:** ✅ All 8 combinations are working correctly (4 methods × 2 distance measurements)
 
 **Recent Fixes (February 2025):**
+- ✅ Fixed family activation error - moved inside transaction
+- ✅ Fixed missing endpoints with Fixed Distance + Chord Length methods
 - ✅ Chord Length support added to all 4 division functions
 - ✅ Maximum methods now support both Arc Length (PointsAtEqualSegmentLength) and Chord Length (PointsAtEqualChordLength)
 - ✅ Fixed Distance methods now support both Arc Length (PointAtSegmentLength) and Chord Length (PointsAtChordLengthFromPoint)
@@ -995,6 +997,21 @@ After execution, you can:
 - Verify placement in Revit viewport
 
 ## Version History
+
+- **v2.9** (February 2025): Bug Fixes - Family Activation & Chord Length Endpoints
+  - **Fixed Family Activation Error**:
+    - **Issue**: `FamilySymbol.Activate()` called outside transaction, causing "Attempt to modify model outside of transaction" error
+    - **Solution**: Moved family activation INSIDE transaction (after `t.Start()`)
+    - **Result**: ✅ Families now activate without warnings
+  - **Fixed Missing Endpoints with Chord Length**:
+    - **Issue**: Fixed Distance + Chord Length methods didn't place families at curve endpoint
+    - **Root Cause**: `PointsAtChordLengthFromPoint()` only returns chord intervals, not endpoint
+    - **Solution**: Explicitly add endpoint for both `divide_fixed_total_length()` and `divide_fixed_each_segment()` with chord_length measurement
+    - **Affected Combinations**:
+      - Fixed Distance + Total Length + Chord Length
+      - Fixed Distance + Each Segment + Chord Length (both START and MIDDLE modes)
+    - **Result**: ✅ Families now place at both start and end of curves with chord length measurement
+  - **Status**: ✅ All 8 combinations fully working (4 divide methods × 2 distance measurements) with proper endpoint coverage
 
 - **v2.8** (February 2025): Chord Length Support for All Division Methods
   - **New Feature: Distance Measurement option**:
